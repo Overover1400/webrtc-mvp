@@ -43,6 +43,9 @@ class MainActivity : Activity() {
 
         val connectBtn = Button(this).apply { text = "Connect" }
 
+        val fetchInput = EditText(this).apply { hint = "URL to fetch, e.g. example.com" }
+        val fetchBtn = Button(this).apply { text = "Fetch via tunnel" }
+
         logView = TextView(this).apply {
             text = "Logs:\n"
             movementMethod = ScrollingMovementMethod()
@@ -54,6 +57,8 @@ class MainActivity : Activity() {
         root.addView(roomInput)
         root.addView(roleGroup)
         root.addView(connectBtn)
+        root.addView(fetchInput)
+        root.addView(fetchBtn)
         root.addView(scroll)
         setContentView(root)
 
@@ -68,6 +73,12 @@ class MainActivity : Activity() {
                 runOnUiThread { append(msg) }
             }
             session?.start()
+        }
+
+        fetchBtn.setOnClickListener {
+            val target = fetchInput.text.toString().trim()
+            if (target.isEmpty()) { append("Enter a URL to fetch"); return@setOnClickListener }
+            session?.fetchUrl(target)
         }
     }
 

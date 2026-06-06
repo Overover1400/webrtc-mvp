@@ -1,6 +1,8 @@
 package com.example.webrtcmvp
 
 import android.content.Context
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -16,6 +18,7 @@ import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpReceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.Timer
 import java.util.TimerTask
@@ -127,7 +130,8 @@ class WebRtcSession(
                 log("DC state: $state")
                 if (state == DataChannel.State.OPEN) {
                     log(">>> DATACHANNEL OPEN <<<")
-                    if (role == Role.CLIENT) startPing()
+                    dcOpen = true
+                    if (role == Role.CLIENT) log("Ready - type a URL and tap Fetch")
                 }
             }
             override fun onMessage(buffer: DataChannel.Buffer?) {
@@ -135,17 +139,42 @@ class WebRtcSession(
                 val bytes = ByteArray(buffer.data.remaining())
                 buffer.data.get(bytes)
                 val text = String(bytes, Charsets.UTF_8)
-                log("RECV: $text")
-                if (role == Role.RELAY && text == "ping") sendData("pong")
+                if (role == Role.RELAY && text.startsWith("GET ")) {
+                    handleFetch(text.removePrefix("GET ").trim())
+                } else {
+                    log("RECV: $text")
+                }
             }
         })
     }
 
-    private fun startPing() {
-        pingTimer = Timer()
-        pingTimer?.scheduleAtFixedRate(object : TimerTask() {
-            override fun run() { sendData("ping") }
-        }, 0, 2000)
+    @Volatile private var dcOpen = false
+
+    fun fetchUrl(url: String) {
+        if (!dcOpen) { log("Not connected yet"); return }
+        var u = url.trim()
+        if (!u.startsWith("http")) u = "https://$u"
+        log("FETCH: $u")
+        sendData("GET $u")
+    }
+
+    private fun handleFetch(url: String) {
+        log("relay fetching: $url")
+        val req = try { Request.Builder().url(url).build() } catch (e: Exception) {
+            sendData("RESP error: bad url"); return
+        }
+        http.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                sendData("RESP error: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val code = it.code
+                    val body = it.body?.string() ?: ""
+                    sendData("RESP $code (${body.length} bytes)\n${body.take(1500)}")
+                }
+            }
+        })
     }
 
     private fun sendData(text: String) {
