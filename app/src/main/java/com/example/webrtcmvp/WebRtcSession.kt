@@ -42,8 +42,11 @@ class WebRtcSession(
     private var pingTimer: Timer? = null
 
     private val iceServers = listOf(
-        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-        PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
+        PeerConnection.IceServer.builder("stun:relay.trickora.com:3478").createIceServer(),
+        PeerConnection.IceServer.builder("turn:relay.trickora.com:3478")
+            .setUsername("webrtc").setPassword("Tr1ckoraTurn2026").createIceServer(),
+        PeerConnection.IceServer.builder("turn:relay.trickora.com:3478?transport=tcp")
+            .setUsername("webrtc").setPassword("Tr1ckoraTurn2026").createIceServer()
     )
 
     fun start() {
@@ -75,6 +78,7 @@ class WebRtcSession(
     private fun createPeerConnection() {
         val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+            iceTransportsType = PeerConnection.IceTransportsType.RELAY
         }
         pc = factory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
             override fun onSignalingChange(s: PeerConnection.SignalingState?) {}
