@@ -91,7 +91,7 @@ class MainActivity : Activity() {
             if (prep != null) startActivityForResult(prep, 1) else onActivityResult(1, RESULT_OK, null)
         }
         stopVpnBtn.setOnClickListener {
-            stopService(Intent(this, TunVpnService::class.java))
+            startService(Intent(this, TunVpnService::class.java).setAction("STOP"))
             append("Stopping VPN...")
         }
     }

@@ -12,11 +12,13 @@ class TunVpnService : VpnService() {
 
     companion object {
         var onLog: ((String) -> Unit)? = null
+        const val ACTION_STOP = "STOP"
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) { stopVpn(); return START_NOT_STICKY }
         if (!running) startTun()
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun startTun() {
@@ -46,17 +48,23 @@ class TunVpnService : VpnService() {
                 if (count % 10 == 0) log("captured $count packets ($bytes bytes)")
             }
         } catch (e: Exception) {
-            log("read loop ended: ${e.message}")
+            // expected when the fd is closed on stop
         }
     }
 
-    override fun onDestroy() {
+    private fun stopVpn() {
+        if (!running && vpnInterface == null) { stopSelf(); return }
         running = false
-        thread?.interrupt()
         try { vpnInterface?.close() } catch (_: Exception) {}
+        vpnInterface = null
+        thread?.interrupt()
+        thread = null
         log(">>> VPN stopped <<<")
-        super.onDestroy()
+        stopSelf()
     }
+
+    override fun onRevoke() { stopVpn(); super.onRevoke() }
+    override fun onDestroy() { stopVpn(); super.onDestroy() }
 
     private fun log(m: String) { onLog?.invoke(m) }
 }
