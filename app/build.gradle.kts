@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.example.webrtcmvp"
     compileSdk = 34
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "com.example.webrtcmvp"
@@ -13,6 +14,14 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path = file("src/main/jni/Android.mk")
+        }
     }
 
     buildTypes { debug { isMinifyEnabled = false } }
