@@ -20,8 +20,6 @@ import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.util.Timer
-import java.util.TimerTask
 import java.util.concurrent.CopyOnWriteArrayList
 
 class WebRtcSession(
@@ -41,8 +39,8 @@ class WebRtcSession(
 
     private var remoteSet = false
     private var offered = false
+    @Volatile private var dcOpen = false
     private val pendingRemoteCandidates = CopyOnWriteArrayList<IceCandidate>()
-    private var pingTimer: Timer? = null
 
     private val iceServers = listOf(
         PeerConnection.IceServer.builder("stun:relay.trickora.com:3478").createIceServer(),
@@ -59,7 +57,6 @@ class WebRtcSession(
     }
 
     fun stop() {
-        pingTimer?.cancel()
         try { dc?.close() } catch (_: Exception) {}
         try { pc?.close() } catch (_: Exception) {}
         try { ws?.close(1000, "bye") } catch (_: Exception) {}
@@ -147,8 +144,6 @@ class WebRtcSession(
             }
         })
     }
-
-    @Volatile private var dcOpen = false
 
     fun fetchUrl(url: String) {
         if (!dcOpen) { log("Not connected yet"); return }

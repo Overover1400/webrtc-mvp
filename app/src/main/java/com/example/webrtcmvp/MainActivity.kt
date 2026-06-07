@@ -1,6 +1,8 @@
 package com.example.webrtcmvp
 
 import android.app.Activity
+import android.content.Intent
+import android.net.VpnService
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
 import android.widget.Button
@@ -42,9 +44,10 @@ class MainActivity : Activity() {
         clientBtn.isChecked = true
 
         val connectBtn = Button(this).apply { text = "Connect" }
-
         val fetchInput = EditText(this).apply { hint = "URL to fetch, e.g. example.com" }
         val fetchBtn = Button(this).apply { text = "Fetch via tunnel" }
+        val vpnBtn = Button(this).apply { text = "Start VPN capture" }
+        val stopVpnBtn = Button(this).apply { text = "Stop VPN" }
 
         logView = TextView(this).apply {
             text = "Logs:\n"
@@ -59,6 +62,8 @@ class MainActivity : Activity() {
         root.addView(connectBtn)
         root.addView(fetchInput)
         root.addView(fetchBtn)
+        root.addView(vpnBtn)
+        root.addView(stopVpnBtn)
         root.addView(scroll)
         setContentView(root)
 
@@ -79,6 +84,24 @@ class MainActivity : Activity() {
             val target = fetchInput.text.toString().trim()
             if (target.isEmpty()) { append("Enter a URL to fetch"); return@setOnClickListener }
             session?.fetchUrl(target)
+        }
+
+        vpnBtn.setOnClickListener {
+            val prep = VpnService.prepare(this)
+            if (prep != null) startActivityForResult(prep, 1) else onActivityResult(1, RESULT_OK, null)
+        }
+        stopVpnBtn.setOnClickListener {
+            stopService(Intent(this, TunVpnService::class.java))
+            append("Stopping VPN...")
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            TunVpnService.onLog = { msg -> runOnUiThread { append(msg) } }
+            startService(Intent(this, TunVpnService::class.java))
+            append("VPN starting...")
         }
     }
 
